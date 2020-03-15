@@ -12,8 +12,13 @@
 #include <igl/edge_collapse_is_valid.h> //for IGL_COLLAPSE_EDGE_NULL
 
 #include "min_heap.h"
+#include <igl/writeDMAT.h>
 #include <utility>
 
+double ce_t_pop = 0;
+double ce_t_up = 0;
+double ce_t_re = 0;
+double ce_t_collapse = 0;
 bool collapse_edge(
   const std::function<void(
     const int,
@@ -69,9 +74,18 @@ bool collapse_edge(
   int & f1,
   int & f2)
 {
+  const auto & tictoc = []() -> double
+  {
+    static double t_start = igl::get_seconds();
+    double diff = igl::get_seconds()-t_start;
+    t_start += diff;
+    return diff;
+  };
+  
   using namespace Eigen;
   using namespace igl;
   std::tuple<double,int,int> p;
+  tictoc();
   while(true)
   {
     // Check if Q is empty
@@ -98,6 +112,7 @@ bool collapse_edge(
     assert(std::get<2>(p)  < EQ(e) || EQ(e) == -1);
     // try again.
   }
+  ce_t_pop += tictoc();
 
   std::vector<int> N  = circulation(e, true,EMAP,EF,EI);
   std::vector<int> Nd = circulation(e,false,EMAP,EF,EI);
@@ -112,6 +127,7 @@ bool collapse_edge(
     collapsed = false;
   }
   post_collapse(V,F,E,EMAP,EF,EI,Q,EQ,C,e,e1,e2,f1,f2,collapsed);
+  ce_t_collapse += tictoc();
   if(collapsed)
   {
     // Erase the two, other collapsed edges by marking their timestamps as -1
@@ -141,6 +157,7 @@ bool collapse_edge(
         }
       }
     }
+    ce_t_up += tictoc();
   }else
   {
     // reinsert with infinite weight (the provided cost function must **not**
@@ -149,6 +166,7 @@ bool collapse_edge(
     EQ(e)++;
     // Replace in queue
     Q.emplace(std::numeric_limits<double>::infinity(),e,EQ(e));
+    ce_t_re += tictoc();
   }
   return collapsed;
 }
@@ -274,6 +292,7 @@ bool decimate(
     }
     int prev_e = -1;
     bool clean_finish = false;
+    std::cout<<"  init: "<<tictoc()<<std::endl;
 
     while(true)
     {
@@ -308,6 +327,11 @@ bool decimate(
       }
       prev_e = e;
     }
+    std::cout<<"    ce_t_pop:"<<ce_t_pop<<std::endl;
+    std::cout<<"    ce_t_col:"<<ce_t_collapse<<std::endl;
+    std::cout<<"    ce_t_up :"<<ce_t_up<<std::endl;
+    std::cout<<"    ce_t_re :"<<ce_t_re<<std::endl;
+    std::cout<<"  while:"<<tictoc()<<std::endl;
     // remove all IGL_COLLAPSE_EDGE_NULL faces
     MatrixXi F2(F.rows(),3);
     J.resize(F.rows());
@@ -329,8 +353,9 @@ bool decimate(
     VectorXi _1;
     igl::remove_unreferenced(V,F2,U,G,_1,I);
     ret = clean_finish;
+    //igl::writeDMAT("EQ.dmat",EQ.cast<double>(),false);
   }
-  std::cout<<"    decimate: "<<tictoc()<<std::endl;
+  std::cout<<"  clean: "<<tictoc()<<std::endl;
   const Eigen::Array<bool,Eigen::Dynamic,1> keep = (J.array()<orig_m);
   igl::slice_mask(Eigen::MatrixXi(G),keep,1,G);
   igl::slice_mask(Eigen::VectorXi(J),keep,1,J);
@@ -381,4 +406,5 @@ int main(int argc, char * argv[])
 //
 //int main(int argc, char * argv[])
 //{
+//  igl::min_heap< std::tuple<double,int,int> > Q;
 //}
