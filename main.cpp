@@ -40,21 +40,26 @@ int main(int argc, char * argv[])
   std::cout<<"deci_old: "<<tictoc()<<std::endl;
   igl::write_triangle_mesh("decimate-profile-old.obj",U,G);
 
+  std::this_thread::sleep_for(std::chrono::seconds(3));
+
+
   tictoc();
   ::decimate<false>(V,F,m,U,G);
   std::cout<<"decimate: "<<tictoc()<<std::endl;
   igl::write_triangle_mesh("decimate-profile.obj",U,G);
 
-  printf("Hit [Enter] to continue"); getchar(); printf("\n");
+  std::this_thread::sleep_for(std::chrono::seconds(3));
   
   tictoc();
   igl::decimate(V,F,m,U,G,J);
   std::cout<<"igl::decimate: "<<tictoc()<<std::endl;
   igl::write_triangle_mesh("igl-decimate-profile.obj",U,G);
-  //tictoc();
-  //igl::qslim(V,F,m,U,G,I,J);
-  //std::cout<<"   qslim: "<<tictoc()<<std::endl;
-  //igl::write_triangle_mesh("qslim-profile.obj",U,G);
+
+  std::this_thread::sleep_for(std::chrono::seconds(3));
+
+  igl::qslim(V,F,m,U,G,I,J);
+  std::cout<<"   qslim: "<<tictoc()<<std::endl;
+  igl::write_triangle_mesh("igl-qslim-profile.obj",U,G);
 }
 
 //#include <queue>
